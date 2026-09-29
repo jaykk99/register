@@ -174,5 +174,11 @@ t("All files should have valid file names", async (t) => {
 });
 
 t("All files should have valid required and optional fields", async (t) => {
-    await Promise.all(files.map((file) => processFile(file, t)));
+    t.timeout(240000); // 12k+ files need more than ava's 10s default
+    // 12k+ domain files: batch to avoid exhausting file descriptors
+    // (Promise.all over all files at once caused worker crashes/timeouts).
+    const BATCH = 64;
+    for (let i = 0; i < files.length; i += BATCH) {
+        await Promise.all(files.slice(i, i + BATCH).map((file) => processFile(file, t)));
+    }
 });
