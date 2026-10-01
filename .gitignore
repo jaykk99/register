@@ -132,3 +132,8 @@ dist
 # Custom
 .DS_Store
 *.js
+
+# Registry tooling (tracked despite the *.js rule above)
+!scripts/*.js
+!util/validator.js
+!tests/tooling.test.js

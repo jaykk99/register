@@ -30,6 +30,7 @@ const optionalRedirectConfigFields = {
 const blockedFields = ["domain", "internal", "proxy", "reserved", "services", "subdomain", "nested", "record"];
 
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const githubUsernameRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/;
 const hostnameRegex = /^(?=.{1,253}$)(?:(?:[_a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)\.)+[a-zA-Z]{2,63}$/;
 
 const internalDomains = require("../util/internal.json");
@@ -135,7 +136,17 @@ async function processFile(file, t) {
     validateFields(t, data.owner, optionalOwnerFields, file, "owner");
     validateFields(t, data, optionalFields, file);
 
-    if (data.owner.email) {
+    t.regex(
+        data.owner.username,
+        githubUsernameRegex,
+        `${file}: Owner username must be a valid GitHub username (alphanumeric and hyphens, max 39 chars)`
+    );
+
+    if (data.owner.hasOwnProperty("email")) {
+        t.true(
+            typeof data.owner.email === "string" && data.owner.email.length > 0,
+            `${file}: Owner email must not be empty (omit the field instead)`
+        );
         t.regex(data.owner.email, emailRegex, `${file}: Owner email should be a valid email address`);
         t.false(
             data.owner.email.endsWith("@users.noreply.github.com"),

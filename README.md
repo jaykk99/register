@@ -36,6 +36,17 @@ Not all announcements are posted on GitHub[^1], however they will always be post
 - Once your PR is merged, your DNS records should be published with-in a few minutes.
 - Enjoy your new `.is-a.dev` subdomain! Please consider leaving a star ⭐️ to help support us!
 
+## Registry tooling
+
+Beyond the registration docs, this repo ships tooling for working with the registry data itself:
+
+- **Validation** — `npm run validate` checks every file in `domains/` against the same rules the CI tests enforce (file naming, JSON shape, owner username/email format, record values and combinations). Use `npm run validate:changed` to check only files changed in your branch, or `node scripts/validate.js domains/yourname.json` for a single file with friendly error output.
+- **Query** — `npm run query -- --owner <github-user>`, `--name <text>`, `--type <CNAME|A|URL|...>`, `--target <text>`, `--proxied` / `--no-proxied`. Combine filters with AND; add `--json` for machine-readable output. See `node scripts/query.js --help`.
+- **Export** — `npm run export -- --stats` prints registry aggregates (record-type counts, top owners, proxied share). `--format json|csv --out <file>` writes a compact index of every domain (subdomain, owner, record types, targets) for analysis.
+- **Schema** — `util/schema.json` documents the canonical domain-file format (editors can use it for autocomplete/validation); `util/validator.js` is the single source of truth for the validation rules shared by the tests and the CLI.
+
+The automated checks (`npm test`) validate all ~12k domain files: file names, required/optional fields, owner identity format (GitHub username rules, valid non-empty emails), every record value (IP ranges, hostnames, URL schemes, record-type combinations), nested-subdomain parentage, and proxy rules.
+
 ## Spam Pull Requests
 With the recent rising of invalid PRs, including PRs generated with AI, we reserve the right to:
 

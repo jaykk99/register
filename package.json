@@ -4,7 +4,11 @@
     "fs-extra": "^11.2.0"
   },
   "scripts": {
-    "test": "for f in tests/*.test.js; do npx ava \"$f\" || exit 1; done"
+    "test": "for f in tests/*.test.js; do npx ava \"$f\" || exit 1; done",
+    "validate": "node scripts/validate.js --all",
+    "validate:changed": "node scripts/validate.js --changed",
+    "query": "node scripts/query.js",
+    "export": "node scripts/export.js"
   },
   "ava": {
     "concurrency": 2,
