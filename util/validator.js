@@ -356,8 +356,18 @@ function validateRecordValues(subdomain, records, proxied) {
             }
             values.forEach((record, idx) => {
                 if (typeof record !== "string") errors.push(`TXT[${idx}]: value should be a string`);
-                else if (record !== record.trim())
-                    errors.push(`TXT[${idx}]: value has leading/trailing whitespace`);
+                else {
+                    if (record !== record.trim())
+                        errors.push(`TXT[${idx}]: value has leading/trailing whitespace`);
+                    // DNS TXT is a set of character-strings, each capped at 255
+                    // octets (RFC 1035 §3.3.14). Longer values must be split into
+                    // multiple array elements so dnsconfig.js quotes each chunk.
+                    if (record.length > 255)
+                        errors.push(
+                            `TXT[${idx}]: value is ${record.length} characters, ` +
+                                "exceeds the 255-character DNS limit (split it into multiple strings)"
+                        );
+                }
             });
         }
     }
@@ -394,6 +404,19 @@ function validateRedirectConfig(subdomain, data) {
     if (config.redirect_paths && !recordKeys.includes("URL"))
         errors.push("redirect_config.redirect_paths requires a URL record");
 
+    if (
+        config.hasOwnProperty("redirect_paths") &&
+        typeof config.redirect_paths !== "boolean"
+    )
+        errors.push("redirect_config.redirect_paths should be a boolean");
+    if (
+        config.hasOwnProperty("custom_paths") &&
+        (typeof config.custom_paths !== "object" ||
+            config.custom_paths === null ||
+            Array.isArray(config.custom_paths))
+    )
+        errors.push("redirect_config.custom_paths should be an object mapping paths to URLs");
+
     const customPaths = Object.keys(config.custom_paths || {});
     customPaths.forEach((customPath, idx) => {
         const target = config.custom_paths[customPath];
@@ -420,6 +443,46 @@ function validateRedirectConfig(subdomain, data) {
     });
 
     return errors;
+}
+
+// Detect CNAME cycles that span multiple registry files.
+// `entries` is an array of { subdomain, cname } where cname is the raw target
+// string. Only targets inside the registry (other is-a.dev subdomains) are
+// followed. Returns an array of cycles; each cycle is an ordered list of
+// subdomain names where the last element points back to the first.
+function findCnameCycles(entries) {
+    const SUFFIX = ".is-a.dev";
+    const targetOf = new Map();
+    for (const { subdomain, cname } of entries) {
+        if (typeof cname !== "string") continue;
+        const lower = cname.toLowerCase();
+        if (lower.endsWith(SUFFIX))
+            targetOf.set(subdomain, lower.slice(0, -SUFFIX.length));
+    }
+
+    const cycles = [];
+    const seenSignatures = new Set();
+
+    for (const start of targetOf.keys()) {
+        const path = [];
+        const inPath = new Set();
+        let node = start;
+        while (targetOf.has(node) && !inPath.has(node)) {
+            inPath.add(node);
+            path.push(node);
+            node = targetOf.get(node);
+        }
+        if (targetOf.has(node) && inPath.has(node)) {
+            const cycle = path.slice(path.indexOf(node));
+            const signature = [...cycle].sort().join("|");
+            if (!seenSignatures.has(signature)) {
+                seenSignatures.add(signature);
+                cycles.push(cycle);
+            }
+        }
+    }
+
+    return cycles;
 }
 
 // Validate a fully parsed domain file. `file` is the file name (e.g. "example.json").
@@ -473,6 +536,7 @@ module.exports = {
     IPV6_REGEX,
     VALID_RECORD_TYPES,
     findDuplicateKeys,
+    findCnameCycles,
     validateFileName,
     validateOwner,
     validateRecordValues,

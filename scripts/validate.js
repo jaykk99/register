@@ -4,6 +4,7 @@
 //   node scripts/validate.js domains/example.json
 //   node scripts/validate.js domains/a.json domains/b.json
 //   node scripts/validate.js --all            # validate every file in domains/
+//                                             # plus a registry-wide CNAME cycle check
 //   node scripts/validate.js --changed        # validate files changed vs origin/main
 //
 // Exit code is 0 when everything is valid, 1 otherwise.
@@ -12,7 +13,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
-const { findDuplicateKeys, validateDomainFile } = require("../util/validator");
+const { findDuplicateKeys, findCnameCycles, validateDomainFile } = require("../util/validator");
 
 const DOMAINS_DIR = path.resolve(__dirname, "..", "domains");
 
@@ -63,13 +64,31 @@ function validateFile(file) {
     return errors;
 }
 
+// Registry-wide check: CNAME chains that loop between is-a.dev subdomains
+// can never resolve. Only meaningful when every file was loaded.
+function checkCnameCycles(files) {
+    const entries = [];
+    for (const file of files) {
+        let data;
+        try {
+            data = JSON.parse(fs.readFileSync(path.join(DOMAINS_DIR, file), "utf8"));
+        } catch {
+            continue; // broken JSON already reported per-file above
+        }
+        if (data.records && typeof data.records.CNAME === "string") {
+            entries.push({ subdomain: file.replace(/\.json$/, ""), cname: data.records.CNAME });
+        }
+    }
+    return findCnameCycles(entries);
+}
+
 function main() {
     const args = process.argv.slice(2);
 
     if (args.length === 0 || args.includes("-h") || args.includes("--help")) {
         console.log(`Usage:
   node scripts/validate.js <file...>   Validate specific domain files
-  node scripts/validate.js --all       Validate every file in domains/
+  node scripts/validate.js --all       Validate every file in domains/ (incl. CNAME cycle check)
   node scripts/validate.js --changed   Validate files changed vs origin/main
 
 Examples:
@@ -107,6 +126,20 @@ Examples:
 
     const ok = files.length - failed;
     console.log(`\n${ok}/${files.length} file(s) valid${failed ? `, ${failed} failed` : ""}.`);
+
+    if (args.includes("--all")) {
+        const cycles = checkCnameCycles(files);
+        if (cycles.length) {
+            console.log(`\n✖ ${cycles.length} CNAME cycle(s) detected across registry files:`);
+            cycles.forEach((c) =>
+                console.log(`    - ${c.map((s) => `${s}.is-a.dev`).join(" -> ")} -> ${c[0]}.is-a.dev`)
+            );
+            failed += cycles.length;
+        } else {
+            console.log("No CNAME cycles across registry files.");
+        }
+    }
+
     process.exit(failed ? 1 : 0);
 }
 

@@ -8,7 +8,9 @@
     "validate": "node scripts/validate.js --all",
     "validate:changed": "node scripts/validate.js --changed",
     "query": "node scripts/query.js",
-    "export": "node scripts/export.js"
+    "export": "node scripts/export.js",
+    "scaffold": "node scripts/scaffold.js",
+    "similar": "node scripts/similar.js"
   },
   "ava": {
     "concurrency": 2,
