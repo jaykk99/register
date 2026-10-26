@@ -63,6 +63,3 @@ If you find any subdomains being abused or breaking our [ToS](https://is-a.dev/t
 
 We are supported by Cloudflare's [Project Alexandria](https://www.cloudflare.com/lp/project-alexandria) sponsorship program, we would not be able to operate without their help!
 
-<a href="https://www.cloudflare.com">
-   <img alt="Cloudflare Logo" src="https://raw.githubusercontent.com/is-a-dev/register/main/media/cloudflare.png" height="48">
-</a>
