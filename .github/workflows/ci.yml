@@ -44,9 +44,11 @@ jobs:
 
             - name: Run DNSControl tests
               if: github.event_name == 'pull_request' && contains(fromJson(env.CHANGED_FILES), 'dnsconfig.js')
-              uses: is-a-dev/dnscontrol-action@main
-              with:
-                  args: check
+              run: |
+                  curl -sL -o /tmp/dnscontrol.tar.gz "https://github.com/StackExchange/dnscontrol/releases/download/v5.7.2/dnscontrol_5.7.2_linux_amd64.tar.gz"
+                  tar xzf /tmp/dnscontrol.tar.gz -C /tmp dnscontrol
+                  sudo install -m 755 /tmp/dnscontrol /usr/local/bin/dnscontrol
+                  dnscontrol check
 
             - name: Run tests
               run: npx ava tests/*.test.js --timeout=1m

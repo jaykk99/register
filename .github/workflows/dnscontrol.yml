@@ -19,6 +19,11 @@ jobs:
         steps:
             - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-            - uses: is-a-dev/dnscontrol-action@main
-              with:
-                  args: check
+            - name: Install dnscontrol
+              run: |
+                  curl -sL -o /tmp/dnscontrol.tar.gz "https://github.com/StackExchange/dnscontrol/releases/download/v5.7.2/dnscontrol_5.7.2_linux_amd64.tar.gz"
+                  tar xzf /tmp/dnscontrol.tar.gz -C /tmp dnscontrol
+                  sudo install -m 755 /tmp/dnscontrol /usr/local/bin/dnscontrol
+
+            - name: Check DNS config
+              run: dnscontrol check
